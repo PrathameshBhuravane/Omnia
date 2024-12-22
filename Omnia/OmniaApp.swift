@@ -10,24 +10,40 @@ import SwiftUI
 @main
 struct OmniaApp: App {
 
-    @State private var appModel = AppModel()
-
+    @StateObject var appstate = AppState()
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .environment(appModel)
-        }
-
-        ImmersiveSpace(id: appModel.immersiveSpaceID) {
-            ImmersiveView()
-                .environment(appModel)
-                .onAppear {
-                    appModel.immersiveSpaceState = .open
-                }
-                .onDisappear {
-                    appModel.immersiveSpaceState = .closed
+        WindowGroup(id: "content") {
+            MainView(appstate: appstate)
+                .task {
+                    appstate.reset()
+                    await appstate.loadAllModels()
                 }
         }
-        .immersionStyle(selection: .constant(.full), in: .full)
+        .windowResizability(.contentSize)
+        .windowStyle(.plain)
+        .defaultWindowPlacement { content, context in
+            return WindowPlacement(.utilityPanel)
+        }
+        
+        WindowGroup(id: "custom"){
+            CustomizationView(appState: appstate, activeId: .constant(0))
+            
+        }
+        .defaultWindowPlacement { content, context in
+            return WindowPlacement(.trailing(context.windows.first(where: { $0.id == "content" })!))
+        }
+        .windowResizability(.contentSize)
+        .windowStyle(.plain)
+        
+        
+        ImmersiveSpace(id: "CarView") {
+            CarView(appstate: appstate)
+                .onAppear{
+                    appstate.isChange = true
+                }
+        }
+        .defaultWindowPlacement { content, context in
+            return WindowPlacement(.leading(context.windows.first(where: { $0.id == "content" })!))
+        }
     }
 }
